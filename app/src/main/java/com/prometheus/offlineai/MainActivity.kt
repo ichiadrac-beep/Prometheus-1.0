@@ -12,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import dev.ffmpegkit.llama.Llama
 import dev.ffmpegkit.llama.LlamaConfig
+import dev.ffmpegkit.llama.LlamaModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -26,7 +27,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var loadButton: Button
     private lateinit var sendButton: Button
 
-    private var modelHandle: Long = 0L
+    private var model: LlamaModel? = null
     private val REQUEST_PICK_MODEL = 1001
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,26 +68,28 @@ class MainActivity : AppCompatActivity() {
                 contentResolver.openInputStream(uri)?.use { input ->
                     FileOutputStream(dest).use { output -> input.copyTo(output) }
                 }
-                withContext(Dispatchers.IO) {
-                    if (modelHandle != 0L) Llama.releaseModel(modelHandle)
-                    modelHandle = Llama.loadModel(
+                val loaded = withContext(Dispatchers.IO) {
+                    model?.let { Llama.releaseModel(it) }
+                    Llama.loadModel(
                         dest.absolutePath,
                         LlamaConfig(contextSize = 2048, threads = 4)
                     )
                 }
+                model = loaded
                 status.text = "Status: Model loaded (offline)"
                 sendButton.isEnabled = true
                 appendChat("System: Model ready. All inference runs 100% offline on this device.")
             } catch (e: Exception) {
                 status.text = "Status: Failed to load model"
-                Toast.makeText(this@MainActivity, e.message, Toast.LENGTH_LONG).show()
+                Toast.makeText(this@MainActivity, e.message ?: "Unknown error", Toast.LENGTH_LONG).show()
             }
         }
     }
 
     private fun sendPrompt() {
         val prompt = input.text.toString().trim()
-        if (prompt.isEmpty() || modelHandle == 0L) return
+        val currentModel = model
+        if (prompt.isEmpty() || currentModel == null) return
 
         appendChat("You: $prompt")
         input.text.clear()
@@ -97,7 +100,7 @@ class MainActivity : AppCompatActivity() {
             try {
                 val result = withContext(Dispatchers.IO) {
                     Llama.complete(
-                        modelHandle,
+                        currentModel,
                         prompt = prompt,
                         systemPrompt = "You are Prometheus, a helpful offline assistant. Give clear, practical answers. Prefer concise step-by-step guidance for survival, DIY, and home projects.",
                         maxTokens = 512
@@ -119,8 +122,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        if (modelHandle != 0L) {
-            Llama.releaseModel(modelHandle)
-        }
+        model?.let { Llama.releaseModel(it) }
     }
 }
