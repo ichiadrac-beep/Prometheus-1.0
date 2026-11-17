@@ -29,6 +29,7 @@ class MainActivity : AppCompatActivity() {
 
     private var model: LlamaModel? = null
     private val REQUEST_PICK_MODEL = 1001
+    private val BUILTIN_MODEL_NAME = "model.gguf"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,6 +43,40 @@ class MainActivity : AppCompatActivity() {
 
         loadButton.setOnClickListener { pickModel() }
         sendButton.setOnClickListener { sendPrompt() }
+
+        // Auto-load built-in model on startup
+        lifecycleScope.launch {
+            ensureBuiltinModelLoaded()
+        }
+    }
+
+    private suspend fun ensureBuiltinModelLoaded() {
+        status.text = "Status: Preparing built-in model…"
+        try {
+            val modelFile = File(getExternalFilesDir("models"), BUILTIN_MODEL_NAME)
+            if (!modelFile.exists()) {
+                withContext(Dispatchers.IO) {
+                    assets.open(BUILTIN_MODEL_NAME).use { input ->
+                        modelFile.parentFile?.mkdirs()
+                        FileOutputStream(modelFile).use { output -> input.copyTo(output) }
+                    }
+                }
+            }
+            val loaded = withContext(Dispatchers.IO) {
+                model?.let { Llama.releaseModel(it) }
+                Llama.loadModel(
+                    modelFile.absolutePath,
+                    LlamaConfig(contextSize = 2048, threads = 4)
+                )
+            }
+            model = loaded
+            status.text = "Status: Built-in model ready (offline)"
+            sendButton.isEnabled = true
+            appendChat("System: Built-in model loaded. All inference runs 100% offline.")
+        } catch (e: Exception) {
+            status.text = "Status: Built-in model failed. Use Load Model."
+            appendChat("Note: Built-in model not available. Tap Load Model to select a GGUF file.")
+        }
     }
 
     private fun pickModel() {
@@ -60,10 +95,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun copyAndLoadModel(uri: Uri) {
-        status.text = "Status: Copying model…"
+        status.text = "Status: Loading selected model…"
         lifecycleScope.launch {
             try {
-                val dest = File(getExternalFilesDir("models"), "model.gguf")
+                val dest = File(getExternalFilesDir("models"), "custom.gguf")
                 dest.parentFile?.mkdirs()
                 contentResolver.openInputStream(uri)?.use { input ->
                     FileOutputStream(dest).use { output -> input.copyTo(output) }
@@ -76,9 +111,9 @@ class MainActivity : AppCompatActivity() {
                     )
                 }
                 model = loaded
-                status.text = "Status: Model loaded (offline)"
+                status.text = "Status: Custom model loaded (offline)"
                 sendButton.isEnabled = true
-                appendChat("System: Model ready. All inference runs 100% offline on this device.")
+                appendChat("System: Custom model ready.")
             } catch (e: Exception) {
                 status.text = "Status: Failed to load model"
                 Toast.makeText(this@MainActivity, e.message ?: "Unknown error", Toast.LENGTH_LONG).show()
@@ -110,7 +145,7 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 appendChat("Error: ${e.message}")
             } finally {
-                status.text = "Status: Model loaded (offline)"
+                status.text = "Status: Model ready (offline)"
                 sendButton.isEnabled = true
             }
         }

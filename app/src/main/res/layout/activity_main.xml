@@ -19,7 +19,7 @@
         android:id="@+id/status"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Status: No model loaded"
+        android:text="Status: Starting…"
         android:textSize="14sp"
         android:paddingBottom="8dp" />
 
@@ -35,7 +35,7 @@
             android:layout_height="wrap_content"
             android:padding="8dp"
             android:textSize="15sp"
-            android:text="Load a GGUF model to begin.\n\nRecommended: a small model such as Qwen2.5-1.5B-Instruct-Q4_K_M.gguf (≈1 GB)." />
+            android:text="Built-in model loads automatically on first start.\n\nYou can also load a custom GGUF model." />
     </ScrollView>
 
     <EditText
@@ -59,7 +59,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Load Model" />
+            android:text="Load Custom Model" />
 
         <Button
             android:id="@+id/send"

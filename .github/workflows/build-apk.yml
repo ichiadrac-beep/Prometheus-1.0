@@ -26,6 +26,15 @@ jobs:
         with:
           packages: 'platforms;android-34 build-tools;34.0.0 platform-tools'
 
+      - name: Download built-in model
+        run: |
+          mkdir -p app/src/main/assets
+          wget -q -O app/src/main/assets/model.gguf \
+            "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf" || \
+          wget -q -O app/src/main/assets/model.gguf \
+            "https://huggingface.co/bartowski/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/Qwen2.5-0.5B-Instruct-Q4_K_M.gguf"
+          ls -lh app/src/main/assets/
+
       - name: Install Gradle
         run: |
           wget -q https://services.gradle.org/distributions/gradle-8.7-bin.zip
@@ -45,12 +54,14 @@ jobs:
       - name: Create Release and upload APK
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.0
-          name: Prometheus 1.0
+          tag_name: v1.1.0
+          name: Prometheus 1.1.0 (built-in model)
           body: |
-            100% offline on-device AI chat for Android.
+            100% offline on-device AI chat for Android with built-in Qwen2.5-0.5B model.
             
-            Download Prometheus.apk below, install it, then load a GGUF model.
+            Download the APK, install it, and start chatting immediately. No model download needed.
+            
+            You can still load a custom GGUF model with the Load Model button if desired.
           files: app/build/outputs/apk/debug/app-debug.apk
           draft: false
           prerelease: false
