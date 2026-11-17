@@ -17,26 +17,20 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
           packages: 'platforms;android-34 build-tools;34.0.0 platform-tools'
 
-      - name: Generate Gradle wrapper
+      - name: Install Gradle
         run: |
-          if [ ! -f gradlew ]; then
-            # Install gradle temporarily to generate wrapper
-            wget -q https://services.gradle.org/distributions/gradle-8.7-bin.zip
-            unzip -q gradle-8.7-bin.zip
-            ./gradle-8.7/bin/gradle wrapper --gradle-version 8.7
-            rm -rf gradle-8.7 gradle-8.7-bin.zip
-          fi
-          chmod +x gradlew
+          wget -q https://services.gradle.org/distributions/gradle-8.7-bin.zip
+          unzip -q gradle-8.7-bin.zip -d /opt
+          echo "/opt/gradle-8.7/bin" >> $GITHUB_PATH
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --stacktrace
+        run: gradle assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
