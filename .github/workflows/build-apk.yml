@@ -21,15 +21,19 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-34 build-tools;34.0.0 platform-tools'
 
-      - name: Ensure Gradle wrapper
+      - name: Generate Gradle wrapper
         run: |
           if [ ! -f gradlew ]; then
-            # Fallback: use system gradle if wrapper missing
-            sudo apt-get update && sudo apt-get install -y gradle
-            gradle wrapper --gradle-version 8.7
+            # Install gradle temporarily to generate wrapper
+            wget -q https://services.gradle.org/distributions/gradle-8.7-bin.zip
+            unzip -q gradle-8.7-bin.zip
+            ./gradle-8.7/bin/gradle wrapper --gradle-version 8.7
+            rm -rf gradle-8.7 gradle-8.7-bin.zip
           fi
-          chmod +x gradlew || true
+          chmod +x gradlew
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug --stacktrace
